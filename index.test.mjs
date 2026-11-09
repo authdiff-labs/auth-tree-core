@@ -26,3 +26,23 @@ test('preserves invocation order', () => {
 test('rejects malformed invocation data', () => {
   assert.throws(() => compareAuthorization([], auth({ ...call(), args: [{}] })), /argument type/);
 });
+
+test('decodes exact signed i128 values while retaining the wire encoding', () => {
+  const encode = (high, low) => {
+    const bytes = Buffer.alloc(20);
+    bytes.writeUInt32BE(10);
+    bytes.writeBigInt64BE(high, 4);
+    bytes.writeBigUInt64BE(low, 12);
+    return { type: 'i128', xdr: bytes.toString('base64') };
+  };
+  const negative = encode(-1n, (1n << 64n) - 1n);
+  const large = encode(1n, 3n);
+  const [change] = compareAuthorization(auth(call('transfer', [negative])), auth(call('transfer', [large])));
+  assert.deepEqual(change.before, { ...negative, decimal: '-1' });
+  assert.deepEqual(change.after, { ...large, decimal: '18446744073709551619' });
+});
+
+test('leaves malformed i128 strings opaque', () => {
+  const [change] = compareAuthorization(auth(call('transfer', [{type:'i128',xdr:'AAAA'}])), auth(call()));
+  assert.equal(change.before.decimal, undefined);
+});

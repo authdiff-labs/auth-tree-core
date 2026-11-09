@@ -1,3 +1,15 @@
+import { Buffer } from 'node:buffer';
+
+function describeArgument(argument) {
+  if (argument?.type !== 'i128') return argument;
+  const bytes = Buffer.from(argument.xdr, 'base64');
+  if (bytes.length !== 20 || bytes.toString('base64') !== argument.xdr ||
+      bytes.readUInt32BE(0) !== 10) return argument;
+  const high = bytes.readBigInt64BE(4);
+  const low = bytes.readBigUInt64BE(12);
+  return { ...argument, decimal: ((high << 64n) + low).toString() };
+}
+
 const MAX_NODES = 2048;
 const MAX_DEPTH = 32;
 
@@ -49,7 +61,7 @@ export function compareAuthorization(before, after) {
     }
     for (let i = 0; i < Math.max(a.args.length, b.args.length); i++) {
       if (JSON.stringify(a.args[i]) !== JSON.stringify(b.args[i])) {
-        changes.push({ kind: 'argument-changed', path: [...path, 'args', i], before: a.args[i], after: b.args[i] });
+        changes.push({ kind: 'argument-changed', path: [...path, 'args', i], before: describeArgument(a.args[i]), after: describeArgument(b.args[i]) });
       }
     }
     for (let i = 0; i < Math.max(a.children.length, b.children.length); i++) {
