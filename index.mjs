@@ -50,6 +50,31 @@ function normalize(entries) {
   }));
 }
 
+export const CHANGE_KINDS = Object.freeze([
+  'authorization-added',
+  'authorization-removed',
+  'principal-changed',
+  'credential-changed',
+  'call-added',
+  'call-removed',
+  'call-replaced',
+  'argument-changed'
+]);
+
+export function summarizeChanges(changes) {
+  if (!Array.isArray(changes)) {
+    throw new TypeError('Expected an array of changes');
+  }
+  const counts = Object.fromEntries(CHANGE_KINDS.map(kind => [kind, 0]));
+  for (const change of changes) {
+    if (!CHANGE_KINDS.includes(change?.kind)) {
+      throw new TypeError('Unknown change kind: ' + change?.kind);
+    }
+    counts[change.kind] += 1;
+  }
+  return { total: changes.length, counts };
+}
+
 export function compareAuthorization(before, after) {
   const left = normalize(before);
   const right = normalize(after);
@@ -70,8 +95,12 @@ export function compareAuthorization(before, after) {
   }
   for (let i = 0; i < Math.max(left.length, right.length); i++) {
     const a = left[i], b = right[i];
-    if (!a || !b || a.principal !== b.principal || a.credential !== b.credential) {
-      changes.push({ kind: !a ? 'authorization-added' : !b ? 'authorization-removed' : 'credential-changed', path: [i], before: a, after: b });
+    if (!a || !b) {
+      changes.push({ kind: a ? 'authorization-removed' : 'authorization-added', path: [i], before: a, after: b });
+    } else if (a.credential !== b.credential) {
+      changes.push({ kind: 'credential-changed', path: [i], before: a, after: b });
+    } else if (a.principal !== b.principal) {
+      changes.push({ kind: 'principal-changed', path: [i], before: a, after: b });
     } else {
       invocation(a.root, b.root, [i, 'root']);
     }

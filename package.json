@@ -1,0 +1,22 @@
+{
+  "name": "@authdiff/auth-tree-core",
+  "version": "0.3.0",
+  "description": "Compare ordered Soroban authorization trees at exact invocation paths",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
